@@ -35,8 +35,3 @@ async def on_endings_pressed(msg: Message):
         reply_markup=periods_kb(scope="endings__ALL")  # ключевое отличие
     )
 
-
-
-@router.message(F.text == "➕ Добавить проект")
-async def on_add_project_pressed(msg: Message):
-    await msg.answer("Функция добавления проекта скоро появится.")

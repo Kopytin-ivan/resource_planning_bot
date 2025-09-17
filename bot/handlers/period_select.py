@@ -4,6 +4,8 @@ from datetime import date
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
 from aiogram.utils.markdown import hbold, hcode
+import asyncio
+from aiogram.enums import ChatAction
 
 from ..keyboards.periods import PeriodCB
 from ..utils.date_ranges import period_to_range
@@ -46,35 +48,61 @@ async def on_period_selected(cb: CallbackQuery, callback_data: PeriodCB):
             code = scope.split(":", 1)[1] if ":" in scope else ""
             unit = None if (not code or code.upper() == "ALL") else code
 
-            today = date.today()
-            if token == "this_month":
-                resp = await list_endings_in_month(unit, month=today.month, year=today.year)
-            elif token == "next_month":
-                nm, ny = today.month + 1, today.year
-                if nm == 13: nm, ny = 1, ny + 1
-                resp = await list_endings_in_month(unit, month=nm, year=ny)
-            elif token == "quarter":
-                resp = await list_endings_within_months(unit, n=3)
-            elif token == "half_year":
-                resp = await list_endings_within_months(unit, n=6)
-            elif token == "year":
-                resp = await list_endings_within_months(unit, n=12)
-            else:
-                resp = await list_endings_within_months(unit, n=3)
-
-            chunks = resp.get("chunks") or []
-            title = hbold("🔚 Завершения")
-            if not chunks:
-                await cb.message.answer(f"{title}\nВ выбранный период завершений не найдено.")
-            else:
-                for ch in chunks:
-                    for part in split_text(ch, limit=3900):
-                        await cb.message.answer(part)
+            # 0) показать «загрузка» и погасить спиннер callback'а
             try:
-                await cb.answer()
+                await cb.answer("Готовлю список…", show_alert=False)
             except Exception:
                 pass
+            loading = await cb.message.answer("⏳ Собираю завершения…")
+
+            # 0.1) держим «печатает…» пока грузится
+            async def keep_typing():
+                try:
+                    while True:
+                        await cb.message.bot.send_chat_action(cb.message.chat.id, ChatAction.TYPING)
+                        await asyncio.sleep(4)
+                except asyncio.CancelledError:
+                    pass
+            typing_task = asyncio.create_task(keep_typing())
+
+            try:
+                # 1) дергаем нужный эндпоинт GAS по выбранному периоду
+                today = date.today()
+                token = callback_data.period or "quarter"
+                if token == "this_month":
+                    resp = await list_endings_in_month(unit, month=today.month, year=today.year)
+                elif token == "next_month":
+                    nm, ny = today.month + 1, today.year
+                    if nm == 13:
+                        nm, ny = 1, ny + 1
+                    resp = await list_endings_in_month(unit, month=nm, year=ny)
+                elif token == "quarter":
+                    resp = await list_endings_within_months(unit, n=3)
+                elif token == "half_year":
+                    resp = await list_endings_within_months(unit, n=6)
+                elif token == "year":
+                    resp = await list_endings_within_months(unit, n=12)
+                else:
+                    resp = await list_endings_within_months(unit, n=3)
+
+                # 2) рендер
+                chunks = resp.get("chunks") or []
+                parts = []
+                for ch in chunks:
+                    parts.extend(split_text(ch, limit=3900))
+
+                if not parts:
+                    await loading.edit_text("🔚 Завершения\nВ выбранный период завершений не найдено.")
+                else:
+                    # первый кусок — редактируем «⏳»-сообщение
+                    await loading.edit_text(parts[0])
+                    # остальные — как новые сообщения
+                    for p in parts[1:]:
+                        await cb.message.answer(p)
+            finally:
+                typing_task.cancel()
             return
+
 
         # 3) Загрузка конкретного юнита (если где-то используешь periods_kb для него)
         if scope.startswith("load_unit:"):

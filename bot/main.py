@@ -12,6 +12,7 @@ load_dotenv(find_dotenv())
 
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
+from .handlers.add_project import router as add_project_router
 
 from .handlers.start import router as start_router, setup_bot_commands
 from .handlers.menu_text import router as menu_text_router
@@ -34,6 +35,7 @@ async def main():
     dp.include_router(start_router)
     dp.include_router(menu_text_router)
     dp.include_router(load_all_router)   # ⬅ теперь хендлер периодов для «Общей загруженности» реально работает
+    dp.include_router(add_project_router)
     dp.include_router(period_select_router)
     dp.include_router(unit_load_router)
     dp.include_router(overall_router)

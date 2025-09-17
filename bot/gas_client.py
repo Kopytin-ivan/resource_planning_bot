@@ -101,9 +101,21 @@ async def list_active_projects(unit: str) -> dict:
     return await gas_call("list_active_projects", {"unit": unit})
 
 
+
 # === Завершения проектов ===
 async def list_endings_in_month(unit: str, month: int, year: int):
     return await gas_call("list_endings_in_month", {"unit": unit, "month": month, "year": year})
 
 async def list_endings_within_months(unit: str, n: int):
     return await gas_call("list_endings_within_months", {"unit": unit, "months": n})
+
+async def add_project(unit: str, project: str, start: str | None = None, end: str | None = None, manager: str | None = None) -> dict:
+    payload: dict = {"unit": unit, "project": project}
+    if start:   payload["start"]   = start
+    if end:     payload["end"]     = end
+    if manager: payload["manager"] = manager
+    return await gas_call("add_project", payload)
+
+async def list_units_and_managers() -> dict:
+    return await gas_call("list_units_and_managers", {})
+
