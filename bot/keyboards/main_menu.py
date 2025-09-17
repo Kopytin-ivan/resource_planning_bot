@@ -1,9 +1,15 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+# bot/keyboards/main_menu.py
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
-def main_menu() -> InlineKeyboardMarkup:
+def main_menu_kb() -> ReplyKeyboardMarkup:
     rows = [
-        [InlineKeyboardButton(text="📊 Общая загруженность", callback_data="all_load")],
-        [InlineKeyboardButton(text="🧩 Загрузка юнита",      callback_data="unit_load")],
-        [InlineKeyboardButton(text="ℹ️ Помощь",              callback_data="help")],
+        [KeyboardButton(text="📊 Общая загруженность"), KeyboardButton(text="🧩 Загруженность юнита")],
+        [KeyboardButton(text="🔚 Завершения"), KeyboardButton(text="➕ Добавить проект")],
+        [KeyboardButton(text="⚙️ Ещё")]
     ]
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+    return ReplyKeyboardMarkup(
+        keyboard=rows,
+        resize_keyboard=True,   # компактнее
+        is_persistent=True,     # остается всегда
+        one_time_keyboard=False # не скрывать после нажатия
+    )

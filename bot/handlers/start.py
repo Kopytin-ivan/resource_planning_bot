@@ -1,25 +1,27 @@
 # bot/handlers/start.py
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
-from ..keyboards.main_menu import main_menu  # ← относительный импорт
+from aiogram.types import Message, BotCommand
+from ..keyboards.main_menu import main_menu_kb
 
-router = Router()
+router = Router(name="start")
 
-@router.message(F.text.regexp(r"^/(start|help)$"))
-async def cmd_start(m: Message):
-    await m.answer("Привет! Что делаем?", reply_markup=main_menu())
-
-@router.callback_query(F.data == "home")
-async def cb_home(cb: CallbackQuery):
-    await cb.message.edit_text("Главное меню:", reply_markup=main_menu())
-    await cb.answer()
-
-@router.callback_query(F.data == "help")
-async def cb_help(cb: CallbackQuery):
-    await cb.message.edit_text(
-        "Я бот планирования ресурсов.\n"
-        "• 📊 Общая загруженность — суммарно по всем юнитам\n"
-        "• 🧩 Загрузка юнита — выбрать UNIT и период",
-        reply_markup=main_menu()
+@router.message(F.text == "/start")
+async def cmd_start(msg: Message):
+    await msg.answer(
+        "Привет! Я бот для планирования ресурсов. Выбирай действие ниже 👇",
+        reply_markup=main_menu_kb()
     )
-    await cb.answer()
+
+@router.message(F.text == "/menu")
+async def cmd_menu(msg: Message):
+    await msg.answer(
+        "Главное меню:",
+        reply_markup=main_menu_kb()
+    )
+
+# (необязательно) зарегистрируем видимые команды в меню Telegram
+async def setup_bot_commands(bot):
+    await bot.set_my_commands([
+        BotCommand(command="start", description="Показать меню"),
+        BotCommand(command="menu",  description="Главное меню"),
+    ])

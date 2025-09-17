@@ -1,52 +1,54 @@
 # bot/handlers/load_unit.py
+from __future__ import annotations
+
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
-from ..keyboards.units import units_keyboard
-from ..keyboards.periods import periods_keyboard
-from ..utils.date_ranges import preset_range
-from ..gas_client import list_units_and_managers, get_unit_load
-from ..utils.tg_utils import reply_long
+from aiogram.utils.markdown import hcode
 
-router = Router()
-_UNITS: list[dict] | None = None
+from ..gas_client import load_unit
+from ..utils.periods import period_bounds
+from ..keyboards.units import units_keyboard  # предполагаю, что у тебя есть клавиатура выбора юнита
 
-async def _get_units():
-    global _UNITS
-    if _UNITS is None:
-        data = await list_units_and_managers()
-        _UNITS = data.get("units", [])
-    return _UNITS
+router = Router(name="unit_load")
 
+async def _send_unit_load(cb: CallbackQuery, unit: str, period_key: str):
+    try:
+        dt_from, dt_to = period_bounds(period_key)
+        msg = await cb.message.reply(f"⏳ Считаю загруженность для UNIT {unit}…")
+        data = await load_unit(**{"unit": unit, "from": dt_from, "to": dt_to})
+        if not data.get("ok"):
+            raise RuntimeError(data.get("error") or "unknown error")
+
+        text = data.get("text") or "Пусто."
+        head = f"📦 UNIT {unit}\nПериод: {dt_from} — {dt_to}\n\n"
+        await msg.edit_text((head + text)[:4096])
+    except Exception as e:
+        await cb.message.answer(f"⚠️ Ошибка при загрузке юнита:\n{hcode(str(e))}")
+
+# 1) Поддержка твоей старой кнопки с callback_data="unit_load" — сначала попросим выбрать юнит
 @router.callback_query(F.data == "unit_load")
-async def pick_unit(cb: CallbackQuery):
-    units = await _get_units()
-    await cb.message.edit_text("Выбери юнит:", reply_markup=units_keyboard(units, page=1, action_prefix="unitload"))
+async def on_unit_load_legacy(cb: CallbackQuery):
     await cb.answer()
+    # показываем клавиатуру выбора юнита; по умолчанию далее считаем текущий месяц
+    await cb.message.answer("Выбери UNIT:", reply_markup=units_keyboard(prefix="unitload", period="month"))
 
-@router.callback_query(F.data.startswith("unitload:page:"))
-async def units_page(cb: CallbackQuery):
-    units = await _get_units()
-    p = int(cb.data.split(":")[-1])
-    await cb.message.edit_reply_markup(reply_markup=units_keyboard(units, page=p, action_prefix="unitload"))
+# 2) Новый формат:
+# "unitload:<unit>:month"
+# "unitload:<unit>:quarter"
+# "unitload:<unit>:year"
+# "unitload:<unit>:custom:YYYY-MM-DD:YYYY-MM-DD"
+@router.callback_query(F.data.startswith("unitload:"))
+async def on_unit_load(cb: CallbackQuery):
     await cb.answer()
+    parts = (cb.data or "").split(":")
+    if len(parts) < 3:
+        await cb.message.answer("Некорректные параметры для загрузки юнита.")
+        return
 
-@router.callback_query(F.data.startswith("unitload:pick:"))
-async def unit_picked(cb: CallbackQuery):
-    unit = cb.data.split(":")[-1]
-    await cb.message.edit_text(f"UNIT {unit}. Выбери период:", reply_markup=periods_keyboard(f"unitloadrun:{unit}"))
-    await cb.answer()
+    unit = parts[1]
+    kind = parts[2]
+    period_key = kind
+    if kind == "custom" and len(parts) >= 5:
+        period_key = f"{kind}:{parts[3]}:{parts[4]}"
 
-@router.callback_query(F.data.startswith("unitloadrun:"))
-async def unit_run(cb: CallbackQuery):
-    _, unit, _, preset = cb.data.split(":")
-    dt_from, dt_to = (None, None) if preset == "none" else preset_range(preset)
-    r = await get_unit_load(unit, dt_from, dt_to)
-    text = r.get("text")
-    chunks = r.get("chunks")
-    await cb.message.edit_text("Готово. Отправляю…")
-    if text:
-        await reply_long(cb.message.bot, cb.message.chat.id, text)
-    if chunks:
-        for block in chunks:
-            await reply_long(cb.message.bot, cb.message.chat.id, block)
-    await cb.answer()
+    await _send_unit_load(cb, unit, period_key)
