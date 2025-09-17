@@ -68,6 +68,9 @@ async def load_unit(**kwargs) -> Dict[str, Any]:
     """
     return await gas_call("get_unit_load", kwargs)
 
+async def list_units() -> dict:
+    return await gas_call("list_units", {})
+
 
 # по желанию можно добавить и остальные обёртки:
 async def list_units_and_managers() -> Dict[str, Any]:
@@ -90,3 +93,18 @@ async def remove_project(**kwargs) -> Dict[str, Any]:
 
 async def set_manager(**kwargs) -> Dict[str, Any]:
     return await gas_call("set_manager", kwargs)
+
+async def list_units_min() -> dict:
+    return await gas_call("list_units_min", {})
+
+async def list_active_projects(unit: str) -> dict:
+    return await gas_call("list_active_projects", {"unit": unit})
+
+
+# === ЗАВЕРШЕНИЯ ПРОЕКТОВ ===
+async def list_endings_in_month(unit: str, month: int, year: int) -> dict:
+    return await gas_call("list_endings_in_month", {"unit": unit, "month": month, "year": year})
+
+async def list_endings_within_months(unit: str, n: int) -> dict:
+    # n = 3 (квартал), 6 (полугодие), 12 (год)
+    return await gas_call("list_endings_within_months", {"unit": unit, "months": n})

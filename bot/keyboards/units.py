@@ -2,7 +2,19 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 PAGE_SIZE = 10
 
-def units_keyboard(units: list[dict], page: int, action_prefix: str = "unitload") -> InlineKeyboardMarkup:
+def units_keyboard(
+    units: list[dict],
+    page: int,
+    action_prefix: str,
+    extra_rows: list[list[InlineKeyboardButton]] | None = None
+) -> InlineKeyboardMarkup:
+    """
+    Пагинируемый список юнитов.
+    - units: {"code": "2.1", "top": "2", "label": "Александр Аляев"} — label берём из GAS
+    - action_prefix:
+        "unitload_top"           → "unitload_top:pick:<code>" / "unitload_top:page:<n>"
+        "unitload_sub:<topCode>" → "unitload_sub:<topCode>:pick:<code>" / ...:page:<n>
+    """
     if page < 1:
         page = 1
     start = (page - 1) * PAGE_SIZE
@@ -21,6 +33,9 @@ def units_keyboard(units: list[dict], page: int, action_prefix: str = "unitload"
         nav.append(InlineKeyboardButton(text="Далее ›", callback_data=f"{action_prefix}:page:{page+1}"))
     if nav:
         rows.append(nav)
+
+    if extra_rows:
+        rows.extend(extra_rows)
 
     rows.append([InlineKeyboardButton(text="🏠 В меню", callback_data="home")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
