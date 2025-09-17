@@ -101,10 +101,9 @@ async def list_active_projects(unit: str) -> dict:
     return await gas_call("list_active_projects", {"unit": unit})
 
 
-# === ЗАВЕРШЕНИЯ ПРОЕКТОВ ===
-async def list_endings_in_month(unit: str, month: int, year: int) -> dict:
+# === Завершения проектов ===
+async def list_endings_in_month(unit: str, month: int, year: int):
     return await gas_call("list_endings_in_month", {"unit": unit, "month": month, "year": year})
 
-async def list_endings_within_months(unit: str, n: int) -> dict:
-    # n = 3 (квартал), 6 (полугодие), 12 (год)
+async def list_endings_within_months(unit: str, n: int):
     return await gas_call("list_endings_within_months", {"unit": unit, "months": n})

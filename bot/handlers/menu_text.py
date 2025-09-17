@@ -29,10 +29,13 @@ async def on_unit_load_pressed(msg: Message):
 
 @router.message(F.text == "🔚 Завершения")
 async def on_endings_pressed(msg: Message):
+    # показываем периоды сразу для завершений по всем отделам
     await msg.answer(
-        "Выберите период для списка завершений:",
-        reply_markup=periods_kb(scope="load_all")
+        "Показать проекты, которые завершатся…",
+        reply_markup=periods_kb(scope="endings__ALL")  # ключевое отличие
     )
+
+
 
 @router.message(F.text == "➕ Добавить проект")
 async def on_add_project_pressed(msg: Message):

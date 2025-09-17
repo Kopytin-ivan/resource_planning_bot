@@ -19,7 +19,7 @@ from .handlers.load_all import router as load_all_router       # ⬅ подкл�
 from .handlers.load_unit import router as unit_load_router
 from .handlers.overall import router as overall_router
 from .handlers.debug import router as debug_router             # оставляем САМЫМ ПОСЛЕДНИМ
-
+from .handlers.period_select import router as period_select_router
 async def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -34,6 +34,7 @@ async def main():
     dp.include_router(start_router)
     dp.include_router(menu_text_router)
     dp.include_router(load_all_router)   # ⬅ теперь хендлер периодов для «Общей загруженности» реально работает
+    dp.include_router(period_select_router)
     dp.include_router(unit_load_router)
     dp.include_router(overall_router)
     dp.include_router(debug_router)      # ⬅ самый последний
