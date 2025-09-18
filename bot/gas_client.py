@@ -52,6 +52,19 @@ async def gas_call(
         r.raise_for_status()
         return r.json()
 
+async def list_managers() -> dict:
+    return await gas_call("list_managers", {})
+
+
+async def list_projects_by_status(unit: str | None = None) -> dict:
+    payload = {"unit": unit} if unit else {}
+    return await gas_call("list_projects_by_status", payload)
+
+
+async def list_projects_by_status(unit: str | None = None) -> dict:
+    payload = {"unit": unit} if unit else {}
+    return await gas_call("list_projects_by_status", payload)
+
 
 # ===== Удобные врапперы под конкретные интенты =====
 
@@ -100,7 +113,15 @@ async def list_units_min() -> dict:
 async def list_active_projects(unit: str) -> dict:
     return await gas_call("list_active_projects", {"unit": unit})
 
+async def notify_upcoming(days: int = 30) -> dict:
+    return await gas_call("notify_upcoming", {"days": days})
 
+async def mark_paused(unit: str, project: str) -> dict:
+    return await gas_call("mark_paused", {"unit": unit, "project": project})
+
+
+async def mark_pending(unit: str, project: str) -> dict:
+    return await gas_call("mark_pending", {"unit": unit, "project": project})
 
 # === Завершения проектов ===
 async def list_endings_in_month(unit: str, month: int, year: int):
@@ -119,3 +140,5 @@ async def add_project(unit: str, project: str, start: str | None = None, end: st
 async def list_units_and_managers() -> dict:
     return await gas_call("list_units_and_managers", {})
 
+async def get_project_info(unit: str, project: str) -> dict:
+    return await gas_call("get_project_info", {"unit": unit, "project": project})

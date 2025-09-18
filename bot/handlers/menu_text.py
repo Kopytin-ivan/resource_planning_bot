@@ -2,7 +2,8 @@
 from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.utils.markdown import hbold
-
+from ..keyboards.extra_menu import extra_menu_kb
+from ..keyboards.main_menu import main_menu_kb
 from ..keyboards.periods import periods_kb
 from ..keyboards.units import units_keyboard
 from .. import gas_client
@@ -35,3 +36,11 @@ async def on_endings_pressed(msg: Message):
         reply_markup=periods_kb(scope="endings__ALL")  # ключевое отличие
     )
 
+
+@router.message(F.text == "⚙️ Ещё")
+async def on_more_pressed(msg: Message):
+    await msg.answer("Дополнительные действия:", reply_markup=extra_menu_kb())
+
+@router.message(F.text == "⬅️ Назад")
+async def on_back_pressed(msg: Message):
+    await msg.answer("Главное меню:", reply_markup=main_menu_kb())
