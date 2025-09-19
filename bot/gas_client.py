@@ -7,6 +7,9 @@ from typing import Any, Dict, Optional
 import httpx
 from dotenv import load_dotenv, find_dotenv
 
+import asyncio
+from bot.utils.tg_utils import GAS_SEMAPHORE 
+
 # Подтягиваем .env
 load_dotenv(find_dotenv())
 
@@ -42,15 +45,16 @@ async def gas_call(
         "user": user or {},
     }
 
-    async with httpx.AsyncClient(
-        timeout=30,
-        follow_redirects=True,
-        verify=False,
-        trust_env=True,
-    ) as cli:
-        r = await cli.post(GAS_URL, json=payload)
-        r.raise_for_status()
-        return r.json()
+    async with GAS_SEMAPHORE:
+        async with httpx.AsyncClient(
+            timeout=30,
+            follow_redirects=True,
+            verify=False,
+            trust_env=True,
+        ) as cli:
+            r = await cli.post(GAS_URL, json=payload)
+            r.raise_for_status()
+            return r.json()
 
 async def list_managers() -> dict:
     return await gas_call("list_managers", {})

@@ -11,9 +11,12 @@ from aiogram.enums import ChatAction
 from ..keyboards.projects import projects_keyboard
 from ..gas_client import list_units_min, extend_deadline, move_project, list_projects_for_unit
 from ..gas_client import list_units_min, extend_deadline, move_project, list_projects_for_unit, get_project_info
+from ..utils.tg_utils import edit_html
 
 from ..keyboards.units import units_keyboard
 from ..gas_client import list_units_min, extend_deadline, move_project
+
+from ..utils.tg_utils import edit_html, gas_guard, loading_message
 
 router = Router(name="edit_dates")
 
@@ -120,8 +123,10 @@ async def _typing(msg_or_cb, stop: asyncio.Event):
 
 # ---- entry point from extra menu ----
 @router.message(F.text == "✏️ Изменить сроки проекта")
+@gas_guard()
 async def start_edit(msg: Message, state: FSMContext):
-    data = await list_units_min()
+    async with loading_message(msg, "⏳ Загружаю отделы…"):
+        data = await list_units_min()
     units = data.get("units") or []
     tops = [u for u in units if "." not in str(u.get("code",""))]
     await state.set_state(EditDates.choose_unit)
@@ -129,10 +134,12 @@ async def start_edit(msg: Message, state: FSMContext):
     await msg.answer(hbold("Выбери отдел:"), reply_markup=kb)
 
 @router.callback_query(F.data.startswith("ed_top:pick:"))
+@gas_guard()
 async def on_top_pick(cb: CallbackQuery, state: FSMContext):
     await cb.answer()
     code = (cb.data or "").split(":")[-1]
-    data = await list_units_min()
+    async with loading_message(cb, "⏳ Загружаю подюниты…"):
+        data = await list_units_min()
     units = data.get("units") or []
     subs = [u for u in units if str(u.get("top")) == str(code) and "." in str(u.get("code",""))]
     if subs:
@@ -142,7 +149,8 @@ async def on_top_pick(cb: CallbackQuery, state: FSMContext):
         await _show_projects_list(cb, state, unit_code=code, page=1)
 
 async def _show_projects_list(cb: CallbackQuery, state: FSMContext, unit_code: str, page: int):
-    resp = await list_projects_for_unit(unit_code)
+    async with loading_message(cb, "⏳ Загружаю проекты…"):
+        resp = await list_projects_for_unit(unit_code)
     if not resp or not resp.get("ok"):
         err = (resp or {}).get("error") or "неизвестная ошибка"
         await cb.message.answer(f"⚠️ Не удалось получить проекты для UNIT {unit_code}: {err}")
@@ -154,7 +162,8 @@ async def _show_projects_list(cb: CallbackQuery, state: FSMContext, unit_code: s
         return
     kb = projects_keyboard(projects, page=page, action_prefix="edproj")
     await state.set_state(EditDates.choose_project)
-    await cb.message.edit_text(hbold(f"(UNIT {unit_code})\nВыберите проект:"), reply_markup=kb)
+    await edit_html(cb, hbold(f"(UNIT {unit_code})\nВыберите проект:"), reply_markup=kb)
+
 
 @router.callback_query(F.data.startswith("edproj:page:"))
 async def on_proj_page(cb: CallbackQuery, state: FSMContext):
@@ -174,6 +183,7 @@ async def on_proj_page(cb: CallbackQuery, state: FSMContext):
 
 
 @router.callback_query(F.data.startswith("edproj:pick:"))
+@gas_guard()
 async def on_proj_pick(cb: CallbackQuery, state: FSMContext):
     await cb.answer()
     d = await state.get_data()
@@ -190,7 +200,9 @@ async def on_proj_pick(cb: CallbackQuery, state: FSMContext):
     unit = d.get("unit")
 
     # ← тянем текущие даты проекта из GAS
-    info = await get_project_info(unit=unit, project=name)
+    async with loading_message(cb, "⏳ Читаю текущие даты…"):
+        info = await get_project_info(unit=unit, project=name)
+
     curr_start = info.get("start")  # 'YYYY-MM-DD' или None
     curr_end   = info.get("end")    # 'YYYY-MM-DD' или None
 
@@ -209,13 +221,16 @@ async def on_proj_pick(cb: CallbackQuery, state: FSMContext):
 
 
 
+
 @router.callback_query(F.data.startswith("ed_sub:"))
+@gas_guard()
 async def on_sub_pick(cb: CallbackQuery, state: FSMContext):
     await cb.answer()
     parts = (cb.data or "").split(":")
     if len(parts) >= 4 and parts[-2] == "pick":
         code = parts[-1]
         await _show_projects_list(cb, state, unit_code=code, page=1)
+
 
 # ---- pick mode ----
 @router.callback_query(F.data.startswith("ed:mode:"))

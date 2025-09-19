@@ -7,9 +7,10 @@ from aiogram.utils.markdown import hbold, hcode
 import asyncio
 from aiogram.enums import ChatAction
 
+
 from ..keyboards.periods import PeriodCB
 from ..utils.date_ranges import period_to_range
-from ..utils.tg_utils import split_text
+from ..utils.tg_utils import split_text, answer_html
 from ..gas_client import (
     load_all as gas_load_all,
     load_unit as gas_load_unit,
@@ -98,7 +99,7 @@ async def on_period_selected(cb: CallbackQuery, callback_data: PeriodCB):
                     await loading.edit_text(parts[0])
                     # остальные — как новые сообщения
                     for p in parts[1:]:
-                        await cb.message.answer(p)
+                        await answer_html(cb, p)
             finally:
                 typing_task.cancel()
             return

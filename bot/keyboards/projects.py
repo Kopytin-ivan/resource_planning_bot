@@ -1,5 +1,6 @@
 # bot/keyboards/projects.py
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from ..utils.tg_utils import pn   # pretty_name + escape
 
 PAGE_SIZE = 10
 
@@ -17,7 +18,7 @@ def projects_keyboard(
     rows: list[list[InlineKeyboardButton]] = []
     for i, name in enumerate(projects[start:end], start=start):
         title = name if len(name) <= 64 else (name[:61] + "…")
-        rows.append([InlineKeyboardButton(text=title, callback_data=f"{action_prefix}:pick:{i}")])
+        rows.append([InlineKeyboardButton(text=pn(title), callback_data=f"{action_prefix}:pick:{i}")])
 
     nav: list[InlineKeyboardButton] = []
     if start > 0:

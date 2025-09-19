@@ -11,6 +11,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.utils.markdown import hbold
 
 from ..gas_client import list_units_min, list_projects_for_unit, remove_project
+from ..utils.tg_utils import gas_guard
 
 router = Router(name="remove_project")
 

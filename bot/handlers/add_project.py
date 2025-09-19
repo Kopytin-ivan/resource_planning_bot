@@ -13,6 +13,9 @@ from aiogram.enums import ChatAction
 from ..keyboards.units import units_keyboard
 from ..gas_client import list_units_min, list_units_and_managers, add_project
 
+from bot.utils.tg_utils import pn, strip_codes_in_text, answer_html, edit_html, split_text, gas_guard, loading_message
+
+
 router = Router(name="add_project")
 
 class AddProj(StatesGroup):
@@ -70,8 +73,10 @@ async def _keep_typing(msg: Message | CallbackQuery, stop: asyncio.Event):
         except asyncio.TimeoutError: pass
 
 @router.message(F.text == "➕ Добавить проект")
+@gas_guard()                                  # <— антидубль
 async def start_add(msg: Message, state: FSMContext):
-    data = await list_units_min()
+    async with loading_message(msg, "⏳ Загружаю отделы…"):   # <— лоадер
+        data = await list_units_min()
     units = data.get("units") or []
     tops = [u for u in units if "." not in str(u.get("code", ""))]
     await state.set_state(AddProj.choose_unit)
@@ -81,8 +86,9 @@ async def start_add(msg: Message, state: FSMContext):
 @router.callback_query(F.data.startswith("addproj_top:pick:"))
 async def on_top_pick(cb: CallbackQuery, state: FSMContext):
     await cb.answer()
-    code = (cb.data or "").split(":")[-1]
-    data = await list_units_min()
+    async with loading_message(cb, "⏳ Загружаю подюниты…"):
+        code = (cb.data or "").split(":")[-1]
+        data = await list_units_min()
     units = data.get("units") or []
     subs = [u for u in units if str(u.get("top")) == str(code) and "." in str(u.get("code",""))]
     if subs:
@@ -127,9 +133,11 @@ async def mgr_manual(cb: CallbackQuery, state: FSMContext):
     await state.set_state(AddProj.choose_mgr)
 
 @router.callback_query(F.data == "addproj:mgr_pick")
+@gas_guard()
 async def mgr_pick(cb: CallbackQuery, state: FSMContext):
     await cb.answer()
-    data = await list_units_and_managers()
+    async with loading_message(cb, "⏳ Загружаю менеджеров…"):
+        data = await list_units_and_managers()
     all_mgrs: list[str] = data.get("managers") or []
     buttons = [[InlineKeyboardButton(text=m, callback_data=f"addproj:mgr_choose:{i}")]
                for i, m in enumerate(all_mgrs[:12])]
